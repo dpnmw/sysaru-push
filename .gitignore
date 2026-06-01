@@ -1,0 +1,9 @@
+# Built binary
+/sysaru-push
+
+# Secrets — NEVER commit. These live in Secret Manager and are mounted at runtime.
+*.p8
+*-firebase-adminsdk-*.json
+firebase-credentials.json
+.env
+.env.*
