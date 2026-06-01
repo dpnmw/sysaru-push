@@ -26,6 +26,10 @@ type sendRequest struct {
 	Title    string                 `json:"title"`
 	Body     string                 `json:"body"`
 	Data     map[string]interface{} `json:"data"`
+	// Image is an optional URL rendered as the notification's large icon
+	// (Android). Carried as a top-level FCM data key, separate from the
+	// deeplink payload in Body. Empty = no image.
+	Image string `json:"image"`
 }
 
 var (
@@ -121,7 +125,7 @@ func handleSend(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "FCM not configured", http.StatusServiceUnavailable)
 			return
 		}
-		err = fcm.send(r.Context(), req.Token, req.Title, req.Body, dataJSON)
+		err = fcm.send(r.Context(), req.Token, req.Title, req.Body, dataJSON, req.Image)
 	case "ios":
 		if apns == nil {
 			http.Error(w, "APNs not configured", http.StatusServiceUnavailable)

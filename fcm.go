@@ -47,18 +47,24 @@ func newFCMSender(ctx context.Context, credFile string) (*fcmSender, error) {
 //
 // No top-level Notification field, so expo-notifications fully owns display +
 // tap, exactly as it does for Expo-sent pushes.
-func (s *fcmSender) send(ctx context.Context, token, title, body, dataJSON string) error {
+func (s *fcmSender) send(ctx context.Context, token, title, body, dataJSON, image string) error {
+	data := map[string]string{
+		"title":     title,
+		"message":   body,
+		"body":      dataJSON,
+		"channelId": "default",
+	}
+	// Optional large-icon image (e.g. the forum's apple-touch icon). A
+	// top-level data key, read by expo-notifications' patched getImage().
+	if image != "" {
+		data["image"] = image
+	}
 	msg := &messaging.Message{
 		Token: token,
 		Android: &messaging.AndroidConfig{
 			Priority: "high",
 		},
-		Data: map[string]string{
-			"title":     title,
-			"message":   body,
-			"body":      dataJSON,
-			"channelId": "default",
-		},
+		Data: data,
 	}
 	_, err := s.client.Send(ctx, msg)
 	return err
