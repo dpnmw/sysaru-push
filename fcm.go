@@ -13,7 +13,19 @@ type fcmSender struct {
 }
 
 func newFCMSender(ctx context.Context, credFile string) (*fcmSender, error) {
-	app, err := firebase.NewApp(ctx, nil, option.WithCredentialsFile(credFile))
+	var (
+		app *firebase.App
+		err error
+	)
+	if credFile != "" {
+		// Explicit service-account key file (mounted from Secret Manager).
+		app, err = firebase.NewApp(ctx, nil, option.WithCredentialsFile(credFile))
+	} else {
+		// Application Default Credentials — uses the Cloud Run runtime service
+		// account (e.g. firebase-adminsdk) via the metadata server. No key file
+		// or secret needed.
+		app, err = firebase.NewApp(ctx, nil)
+	}
 	if err != nil {
 		return nil, err
 	}

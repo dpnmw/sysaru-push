@@ -49,7 +49,8 @@ Returns `201` on enqueue. `GET /healthz` → `200`.
 |---|---|
 | `PORT` | Listen port (Cloud Run sets this; default `8080`) |
 | `RELAY_BEARER_TOKEN` | Shared secret the plugin must send as `Authorization: Bearer` |
-| `FIREBASE_CREDENTIALS_FILE` | Path to the Firebase Admin service-account JSON (enables Android) |
+| `FIREBASE_CREDENTIALS_FILE` | Path to the Firebase Admin service-account JSON. Optional — omit when using ADC (below). |
+| `FCM_USE_ADC` | Set `true` to enable FCM via Application Default Credentials — Cloud Run running **as** the `firebase-adminsdk` service account, no key file or secret needed. |
 | `APNS_KEY_FILE` | Path to the APNs `.p8` auth key (enables iOS) |
 | `APNS_KEY_ID` | APNs key ID |
 | `APNS_TEAM_ID` | Apple developer team ID |

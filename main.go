@@ -38,16 +38,23 @@ func main() {
 	bearerToken = os.Getenv("RELAY_BEARER_TOKEN")
 	ctx := context.Background()
 
-	// FCM (Android) — enabled only when a credentials file is provided.
-	if cred := os.Getenv("FIREBASE_CREDENTIALS_FILE"); cred != "" {
-		s, err := newFCMSender(ctx, cred)
+	// FCM (Android) — enabled with an explicit key file, or via Application
+	// Default Credentials when FCM_USE_ADC=true (Cloud Run running as the
+	// firebase-adminsdk service account — no key file or secret needed).
+	credFile := os.Getenv("FIREBASE_CREDENTIALS_FILE")
+	if credFile != "" || os.Getenv("FCM_USE_ADC") == "true" {
+		s, err := newFCMSender(ctx, credFile)
 		if err != nil {
 			log.Fatalf("FCM init failed: %v", err)
 		}
 		fcm = s
-		log.Println("FCM (Android) enabled")
+		if credFile != "" {
+			log.Println("FCM (Android) enabled (key file)")
+		} else {
+			log.Println("FCM (Android) enabled (ADC)")
+		}
 	} else {
-		log.Println("FCM (Android) disabled — FIREBASE_CREDENTIALS_FILE not set")
+		log.Println("FCM (Android) disabled — set FIREBASE_CREDENTIALS_FILE or FCM_USE_ADC=true")
 	}
 
 	// APNs (iOS) — enabled only when a .p8 key file is provided.
