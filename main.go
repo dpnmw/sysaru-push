@@ -14,11 +14,15 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"encoding/json"
 	"log"
 	"net/http"
 	"os"
 )
+
+//go:embed static/index.html
+var landingPage []byte
 
 type sendRequest struct {
 	Token    string                 `json:"token"`
@@ -74,10 +78,9 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
+	mux.HandleFunc("/", handleRoot)
+	mux.HandleFunc("/health", handleHealth)
 	mux.HandleFunc("/send", handleSend)
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -85,6 +88,29 @@ func main() {
 	}
 	log.Printf("sysaru-push listening on :%s", port)
 	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, mux))
+}
+
+// handleRoot serves the static landing page at "/" and 404s everything else
+// (the catch-all pattern would otherwise match unknown paths too).
+func handleRoot(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write(landingPage)
+}
+
+// handleHealth is an unauthenticated liveness endpoint for external monitors
+// (UptimeRobot, Better Stack, …). Reports which providers are configured.
+// Note: "/healthz" is intercepted by Google's frontend, so this uses "/health".
+func handleHealth(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"status": "ok",
+		"fcm":    fcm != nil,
+		"apns":   apns != nil,
+	})
 }
 
 func handleSend(w http.ResponseWriter, r *http.Request) {
