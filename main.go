@@ -152,7 +152,11 @@ func handleSend(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		err = fcm.send(r.Context(), req.Token, req.Title, req.Body, dataJSON, req.Image)
-	case "ios":
+	case "ios", "macos":
+		// macOS rides the same APNs path as iOS: the two apps share the bundle
+		// id (app.sysaru), so the APNs topic is identical and the alert payload
+		// shape is the same. The platform is kept distinct upstream (plugin
+		// subscriptions) for correct labeling/pruning; delivery is unified here.
 		if apns == nil {
 			http.Error(w, "APNs not configured", http.StatusServiceUnavailable)
 			return
