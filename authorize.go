@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -41,10 +42,13 @@ var (
 	relaySecret  string
 	bootstrapIP  string // FORUM_ALLOWED_IP — used only until/unless acmanager answers
 
-	authMu     sync.Mutex
-	authCache  *authResult
-	authAt     time.Time
-	authTTL    = 120 * time.Second
+	authMu    sync.Mutex
+	authCache *authResult
+	authAt    time.Time
+	// One check per day: the plugin pings acmanager daily too, so a day is the
+	// system's shared propagation window (revocation, re-lock, usage batches).
+	// Override with AUTHORIZE_TTL_SECS for faster propagation if ever needed.
+	authTTL    = 24 * time.Hour
 	authClient = &http.Client{Timeout: 5 * time.Second}
 )
 
@@ -53,6 +57,11 @@ func initAuthorize() {
 	relayID = strings.TrimSpace(os.Getenv("RELAY_ID"))
 	relaySecret = strings.TrimSpace(os.Getenv("RELAY_SECRET"))
 	bootstrapIP = strings.TrimSpace(os.Getenv("FORUM_ALLOWED_IP"))
+	if v := strings.TrimSpace(os.Getenv("AUTHORIZE_TTL_SECS")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			authTTL = time.Duration(n) * time.Second
+		}
+	}
 }
 
 // authorizeEnabled reports whether IP enforcement is configured. With neither an
