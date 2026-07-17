@@ -44,6 +44,12 @@ var (
 
 func main() {
 	bearerToken = os.Getenv("RELAY_BEARER_TOKEN")
+	initAuthorize()
+	if authorizeEnabled() {
+		log.Println("IP authorization enabled (acmanager-gated)")
+	} else {
+		log.Println("IP authorization disabled — set ACMANAGER_AUTHORIZE_URL + RELAY_ID/RELAY_SECRET (or FORUM_ALLOWED_IP)")
+	}
 	ctx := context.Background()
 
 	// FCM (Android) — enabled with an explicit key file, or via Application
@@ -125,6 +131,16 @@ func handleSend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// IP authorization: this relay is dedicated to one licensed forum, bound to
+	// its egress IP in acmanager. Drop anything from a different source IP (a
+	// leaked/reused relay pass) or when the license is inactive. Definitive 403
+	// so the plugin does not retry. Never logs the token or content.
+	if ok, reason := authorizeSend(r); !ok {
+		log.Printf("push dropped: %s", reason)
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	var req sendRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid JSON", http.StatusBadRequest)
@@ -173,6 +189,9 @@ func handleSend(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "send failed", http.StatusBadGateway)
 		return
 	}
+
+	// Meter delivered pushes (hashed token only — see usage.go).
+	recordUsage(req.Token)
 
 	w.WriteHeader(http.StatusCreated)
 }
